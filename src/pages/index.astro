@@ -1,0 +1,137 @@
+---
+import BaseHead from "../components/BaseHead.astro";
+import Chat from "../components/Chat.astro";
+import Feed from "../components/Feed.astro";
+import { SITE_TITLE, SITE_DESCRIPTION } from "../consts";
+
+import type {
+  LongPost,
+  ShortPost,
+  EmploymentHistory,
+  Project,
+  EmploymentPromotion,
+} from "../types/content";
+
+import { contentfulClient } from "../lib/contentful";
+
+import "@fontsource-variable/playfair-display";
+import "@fontsource/lato";
+
+
+const longPosts = await contentfulClient.getEntries<LongPost>({
+  content_type: "longPost",
+});
+
+const shortPosts = await contentfulClient.getEntries<ShortPost>({
+  content_type: "shortPost",
+});
+
+const employmentHistory = await contentfulClient.getEntries<EmploymentHistory>({
+  content_type: "employmentHistory",
+});
+
+const employmentPromotions =
+  await contentfulClient.getEntries<EmploymentPromotion>({
+    content_type: "employmentPromotion",
+  });
+
+const employmentHistoryEvents = employmentHistory.items
+  .map((e) => {
+    const leaveEvent = e.fields.employedTo
+      ? [
+          {
+            title: `Departed ${e.fields.employer}`,
+            strapline: e.fields.leaveReason ?? `👋 Left my role for a new challenge`,
+            date: new Date(e.fields.employedTo),
+            link: "/employment",
+          },
+        ]
+      : [];
+
+    return [
+      ...leaveEvent,
+      {
+        title: `Joined ${e.fields.employer}`,
+        strapline: e.fields.joinReason ?? `👋 Joined the team`,
+        date: new Date(e.fields.employedFrom),
+        link: "/employment",
+      },
+    ];
+  })
+  .flat();
+
+const employmentPromotionEvents = await Promise.all(
+  employmentPromotions.items.map(async (e) => {
+    const employer = await contentfulClient.getEntry<EmploymentHistory>(e.fields.employer.sys.id);
+    return {
+      title: employer.fields.employer,
+      strapline: `⬆️ Promoted to ${e.fields.role}!`,
+      date: new Date(e.fields.eventDate),
+      link: "/employment",
+    };
+  })
+);
+
+const projects = await contentfulClient.getEntries<Project>({
+  content_type: "project",
+});
+
+const latest = [
+  ...longPosts.items.map((e) => ({
+    title: e.fields.title,
+    strapline: `📖 ${e.fields.strapline}`,
+    date: new Date(e.sys.createdAt),
+    link: `/posts/${e.sys.id}`,
+  })),
+  ...shortPosts.items.map((e) => ({
+    title: "Thought...",
+    strapline: e.fields.body,
+    date: new Date(e.sys.createdAt),
+    link: `/posts/${e.sys.id}`,
+  })),
+  ...projects.items.map((e) => ({
+    title: e.fields.title,
+    strapline: e.fields.strapline,
+    date: new Date(e.fields.date),
+    link: `/projects/${e.sys.id}`,
+  })),
+  ...employmentHistoryEvents,
+  ...employmentPromotionEvents,
+].sort((a, b) => (a.date > b.date ? -1 : 1));
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+  </head>
+  <body>
+    <div id="page-content">
+      <Chat />
+      <Feed posts={latest} />
+    </div>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+      }
+
+      #page-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 16px;
+        padding: 16px;
+        width: 100%;
+      }
+
+      @media (min-width: 768px) {
+        #page-content {
+          max-width: 768px;
+        }
+      }
+    </style>
+  </body>
+</html>

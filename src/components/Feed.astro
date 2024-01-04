@@ -1,0 +1,39 @@
+---
+import FeedCard from "./FeedCard.astro";
+import { friendlyDate } from "../lib/date";
+
+interface Props {
+  posts: {
+	  title: string;
+	  strapline: string;
+	  date: Date;
+	  link: string
+  }[];
+}
+
+const { posts } = Astro.props;
+---
+
+<div>
+	<h2>The latest</h2>
+	<ul>
+		{
+			posts.map((post) => (
+				<FeedCard title={post.title} date={friendlyDate(post.date)} detail={post.strapline} link={post.link} />
+			))
+		}
+	</ul>
+</div>
+<style>
+	h2 {
+		color: #117BFF;
+		font-size: 24px;
+		font-weight: 600;
+		padding: 8px 0;
+	}
+	ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+</style>

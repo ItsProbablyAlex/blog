@@ -1,0 +1,255 @@
+---
+import { Icon } from "astro-icon";
+
+const chatMessages: { side: "right" | "left"; text: string }[] = [
+  {
+    side: "left",
+    text: "Hi, my name is Alex! 👋",
+  },
+  {
+    side: "left",
+    text: "I'm a software engineer based in the UK.",
+  },
+  {
+    side: "left",
+    text: "Ask me a question to get started...",
+  },
+];
+---
+<>
+  <aside id="chat-messages">
+    {chatMessages.map(({ side, text }) => <h1 class={`${side}`}>{text}</h1>)}
+  </aside>
+
+  <form id="chat-form" transition:name="omni-search">
+    <textarea id="chat-input" name="message" placeholder=""></textarea>
+    <button id="chat-submit" type="submit">
+      <Icon
+        id="chat-icon"
+        class="icon"
+        style="display: inline;"
+        name="mdi:creation"
+      />
+      <Icon
+        id="send-icon"
+        class="icon"
+        style="display: none;"
+        name="mdi:send"
+      />
+    </button>
+  </form>
+</>
+
+<script>
+  const textarea = document.getElementById("chat-input") as HTMLTextAreaElement;
+  const form = document.getElementById("chat-form") as HTMLFormElement;
+  const robotIcon = document.getElementById("chat-icon") as HTMLElement;
+  const sendIcon = document.getElementById("send-icon") as HTMLElement;
+
+  // Handle placeholder text
+  const handlePlaceholderText = () => {
+    let runCarouselEvent = true;
+
+    function cleanUp() {
+      runCarouselEvent = false;
+      textarea.placeholder = "";
+      document.removeEventListener("DOMContentLoaded", carouselEvent, true);
+    }
+
+    function clearPlaceholder() {
+      textarea.placeholder = "";
+    }
+
+    async function typeSentence(
+      sentence: string,
+      elem: HTMLTextAreaElement,
+      delay = 100,
+    ) {
+      const letters = sentence.split("");
+      let i = 0;
+      while (i < letters.length) {
+        if (!runCarouselEvent) {
+          clearPlaceholder();
+          break;
+        }
+        await waitForMs(delay);
+        elem.placeholder = elem.placeholder + (letters[i] as string);
+        i++;
+      }
+      return;
+    }
+
+    async function deleteSentence(elem: HTMLTextAreaElement) {
+      const sentence = elem.placeholder;
+      const letters = sentence.split("");
+      while (letters.length > 0) {
+        if (!runCarouselEvent) {
+          clearPlaceholder();
+          break;
+        }
+        await waitForMs(100);
+        letters.pop();
+        elem.placeholder = letters.join("");
+      }
+    }
+
+    async function carousel(textOpts: string[], elem: HTMLTextAreaElement) {
+      var i = 0;
+      while (runCarouselEvent) {
+        await typeSentence(textOpts[i] as string, elem);
+        await waitForMs(1500);
+        await deleteSentence(elem);
+        await waitForMs(500);
+        i++;
+        if (i >= textOpts.length) {
+          i = 0;
+        }
+      }
+    }
+
+    function waitForMs(ms: number) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    const carouselEvent = () =>
+      carousel(
+        [
+          "Ask about my last role...",
+          "Ask what I'm working on...",
+          "Search for a blog post...",
+        ],
+        textarea,
+      );
+
+    document.addEventListener("DOMContentLoaded", carouselEvent, true);
+    return { stopCarousel: cleanUp };
+  };
+  const { stopCarousel } = handlePlaceholderText();
+
+  const sentMessages: string[] = [];
+  const appendChatMessage = (text: string, side: "right" | "left") => {
+    const messages = document.getElementById("chat-messages");
+    const elem = document.createElement("h1");
+    elem.textContent = text;
+    elem.style.textAlign = side;
+    messages?.append(elem);
+    sentMessages.push(text);
+  };
+
+  function formSubmit() {
+    stopCarousel();
+    appendChatMessage(textarea.value, "right");
+    textarea.value = "";
+  }
+
+  // Handle chat message submission
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    formSubmit();
+  });
+
+  textarea.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && textarea.value.length > 0) {
+      e.preventDefault();
+      formSubmit();
+    } else {
+      // Clear textarea if ctrl + backspace is pressed
+      if (e.ctrlKey && e.key === "Backspace") {
+        textarea.value = "";
+      }
+
+      // Compute the number of lines to expand textarea to
+      textarea.style.height = "1lh";
+      const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
+      const scrollHeight = textarea.scrollHeight;
+      let linesToRender = Math.floor(scrollHeight / lineHeight);
+      if (e.key === "Enter") linesToRender++;
+      textarea.style.height = linesToRender + "lh";
+
+      // Change icon if textarea has content
+      if (sentMessages.length > 0 || textarea.value != "") {
+        robotIcon.style.display = "none";
+        sendIcon.style.display = "inline";
+      } else {
+        robotIcon.style.display = "inline";
+        sendIcon.style.display = "none";
+      }
+    }
+  });
+
+  // Add styles when focused on text area
+  textarea.addEventListener("focus", function (_e) {
+    form.classList.add("focused");
+  });
+  textarea.addEventListener("focusout", function (_e) {
+    form.classList.remove("focused");
+  });
+</script>
+<style>
+  aside {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .right {
+    align-self: flex-end;
+    text-align: right;
+    color: black;
+  }
+
+  h1 {
+    display: block;
+    max-width: 40%;
+    align-self: flex-start;
+    color: #006eff;
+    font-size: 24px;
+    font-weight: 600;
+    padding: 0.25lh 0;
+  }
+
+  form {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    border: solid 2px #117bff;
+    opacity: 60%;
+    border-radius: 4px;
+    min-height: 2lh;
+  }
+  .focused {
+    border: solid 2px #006eff;
+  }
+  textarea {
+    border: none;
+    resize: none;
+    outline: none;
+    font-size: 20px;
+    min-width: 80%;
+    max-height: 5lh;
+    height: 1lh;
+    overflow-y: hidden;
+    vertical-align: middle;
+  }
+  textarea::placeholder {
+    color: #177bff;
+    opacity: 60%;
+  }
+  textarea:focus {
+  }
+  .icon {
+    width: 100%;
+    max-height: 1lh;
+    color: #177bff;
+    opacity: 60%;
+  }
+  #chat-submit {
+    border: none;
+    background: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>

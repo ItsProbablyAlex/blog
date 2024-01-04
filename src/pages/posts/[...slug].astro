@@ -1,0 +1,98 @@
+---
+import { documentToHtmlString } from "@contentful/rich-text-html-renderer";
+import { BLOCKS, MARKS } from '@contentful/rich-text-types';
+
+import { contentfulClient } from "../../lib/contentful";
+import type { LongPost } from "../../types/content";
+
+import "@fontsource-variable/playfair-display";
+import "@fontsource/lato";
+import Chat from "../../components/Chat.astro";
+import BaseHead from "../../components/BaseHead.astro";
+
+export async function getStaticPaths() {
+  const longPosts = await contentfulClient.getEntries<LongPost>({
+    content_type: "longPost",
+  });
+
+  return longPosts.items.map((post) => ({
+    params: { slug: post.sys.id },
+    props: { post },
+  }));
+}
+
+const options = {
+  renderMark: {
+    [MARKS.BOLD]: (text) => `<b>${text}</b>`
+  },
+  renderNode: {
+    [BLOCKS.PARAGRAPH]: (node, next) => `<p style='line-height: 1.5; padding: 4px 0;'>${next(node.content)}</p>`
+  }
+}
+
+const { post } = Astro.props;
+interface Props {
+  post: LongPost;
+}
+---
+
+<html>
+  <head>
+    <BaseHead title={post.fields.title.values} description={post.fields.strapline.values} />
+  </head>
+  <body>
+    <div id="outer-wrap">
+      <div id="page-content">
+        <Chat id="#chat" />
+        <div>
+          <h1>{post.fields.title}</h1>
+          <blockquote>{post.fields.strapline}</blockquote>
+          <div id="richtext" set:html={documentToHtmlString(post.fields.body, options)} />
+        </div>
+      </div>
+    </div>
+
+    <style>
+      #outer-wrap {
+        font-family: "Inter", sans-serif;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+      }
+
+      h1 {
+        display: block;
+        align-self: flex-start;
+        color: #006eff;
+        font-size: 24px;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+
+      blockquote {
+        display: block;
+        align-self: flex-start;
+        color: #117bff;
+        opacity: 0.6;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.25;
+        padding: 12px 0;
+      }
+
+      #page-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 16px;
+        padding: 16px;
+      }
+      
+      @media (min-width: 768px) {
+        #page-content {
+          max-width: 768px;
+        }
+      }
+    </style>
+  </body>
+</html>

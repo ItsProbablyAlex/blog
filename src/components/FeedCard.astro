@@ -1,0 +1,49 @@
+---
+const {title, date, detail, link} = Astro.props;
+
+interface Props {
+	title: string;
+	detail: string;
+	date: string;
+	link: string
+}
+
+---
+
+<li>
+	<a href={link}>
+		<span>
+			<span id="post-title">{title}</span>.
+			<span id="date">{date}</span>
+		</span>
+		<p>{detail}</p>
+	</a>
+</li>
+
+<style>
+	li {
+		margin-bottom: 20px;
+	}
+	a {
+		text-decoration: none;
+	}
+	#post-title {
+		color: #5EB3FF;
+		font-size: 24px;
+		font-weight: 600;
+		border-top: #5EB3FF 2px solid;
+	}
+	#date {
+		color: #5EB3FF;
+		font-size: 14px;
+	}
+	p {
+		max-width: 100%;
+		color: #5E84A7;
+		font-size: 14px;
+		text-overflow: ellipsis;
+		white-space: normal;
+		overflow-wrap: break-word;
+
+	}
+</style>
